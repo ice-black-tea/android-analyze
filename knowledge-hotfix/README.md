@@ -1,16 +1,18 @@
 [toc]
 
-# 基于MultiDex
+#热修复方案
+
+## 基于MultiDex
 
 ![MultiDex修复方案](imgs/multidex修复方案.png)
 
-## Qzone（QQ空间）
+### Qzone（QQ空间）
 
 检测规则
 ~~com.tencent.component.utils.injector~~
 com.tencent.component.utils.injector.ClassLoaderInjector  检测成功
 
-### DEX修复原理
+#### DEX修复原理
 
 在DexPathList的findClass中可以看出当多个dex中含有重复的类时，会找到靠前的dex中的类
 ```java
@@ -143,7 +145,7 @@ if (ClassVerifier.PREVENT_VERIFY) {
 
 *缺点：插桩的解决方案会影响到运行时性能，app内的所有类都预埋引用一个独立dex的空类，导致安装dexopt阶段的preverify失败，运行时将再次verify+optimize*
 
-## QFix（手机QQ）
+### QFix（手机QQ）
 
 检测规则
 com.tencent.mobileqq.qfix
@@ -151,7 +153,7 @@ com.tencent.mobileqq.qfix.QFixApplication
 
 ![QQ空间超级补丁技术流程图](imgs/QQ空间超级补丁技术流程图.png)
 
-### DEX修复原理
+#### DEX修复原理
 
 与Qzone热修复方案相似，只是处理CLASS_ISPREVERIFIED有所差别
 
@@ -186,32 +188,32 @@ ClassObject* dvmFindLoadedClass(const char* descriptor)
 
 *局限性：由于是在dexopt后加载的补丁类，不能新增virtual方法，以免打乱虚表顺序*
 
-## Nuwa（个人）
+### Nuwa（个人）
 github: https://github.com/jasonross/Nuwa
 
 检测规则
 ~~cn.jiajixin.nuwa~~
 cn.jiajixin.nuwa.Nuwa  检测成功
 
-# 基于JNI替换
+## 基于JNI替换
 
 ![JNI函数Hook原理](imgs/JNI函数Hook原理.png)
 
-## Dexposed（淘宝）
+### Dexposed（淘宝）
 github: https://github.com/alibaba/dexposed
 
 检测规则
 ~~com.taobao.android.dexposed~~
 com.taobao.android.dexposed.XposedHelpers  检测成功
 
-## Andfix（阿里）
+### Andfix（阿里）
 github: https://github.com/alibaba/AndFix
 
 检测规则
 com.alipay.euler.andfix  检测成功
 ~~com.alipay.euler.andfix.AndFixManager  检测失败~~
 
-## Sophix（阿里）
+### Sophix（阿里）
 使用方法： https://help.aliyun.com/document_detail/53240.html
 
 检测规则
@@ -243,9 +245,9 @@ Android版本|支持2.3~7.0|支持2.3~6.0|全部支持包含7.0以上
 [4] 由于支持了资源和库，如果有这些方面的更新，就会导致的补丁变大一些，这个是很正常的。并且由于只包含差异的部分，所以补丁已经是最大程度的小了。
 [5] 提供服务端的补丁发布和停发、版本控制和灰度功能，存储开发者上传的补丁包。
 
-### DEX修复原理
+#### DEX修复原理
 
-#### 立即生效方式
+##### 立即生效方式
 
 以Android 6.0，art虚拟机中ArtMethod修复为例：
 
@@ -346,7 +348,7 @@ size_t methSize = secMid - firMid;
 
 *局限性：只能支持方法的替换。方法增加和减少以及成员字段的增加和减少无法通过该方式进行修复*
 
-#### 冷启动生效方式
+##### 冷启动生效方式
 
 ![Sophix冷启动修复dex方案](imgs/Sophix冷启动修复dex方案.png)
 
@@ -358,7 +360,7 @@ Sophix的做法是在旧dex中移除补丁class的定义，从而避免了CLASS_
 
 ![Sophix冷启动补丁类](imgs/Sophix冷启动补丁类.png)
 
-```c++
+```
 @/dalvik/vm/analysis/DexPrepare.cpp
 
 static void verifyAndOptimizeClasses(DexFile* pDexFile, bool doVerify,
@@ -391,7 +393,7 @@ static void verifyAndOptimizeClasses(DexFile* pDexFile, bool doVerify,
 
 针对Application所在的dex，出现CLASS_ISPREVERIFIED标志则会在jni中手动去除标志，将热修复初始化代码放在attachBaseContext最前面，一般就不会出什么问题
 
-### 资源修复原理
+#### 资源修复原理
 
 默认由Android SDK编出来的apk，是由aapt工具进行打包的，其资源包的package id就是0x7f。
 
@@ -465,7 +467,7 @@ private Field assetManagerField(String name) {
 
 ```
 
-### so修复原理
+#### so修复原理
 
 调用System.loadLibrary时，会调用到ClassLoader.findLibrary搜索各个目录下是否存在指定so文件
 
@@ -543,9 +545,9 @@ public String findLibrary(String libraryName) {
 sdk >= 21时，直接反射拿到Application对象的primaryCpuAbi即可
 sdk < 21时，由于此时不支持64位，所以直接把Build.CPU_ABI，Build.CPU_ABI2作为primaryCpuAbi即可
 
-# 基于instant app
+## 基于instant app
 
-## Tinker（腾讯）
+### Tinker（腾讯）
 github: https://github.com/Tencent/tinker
 
 检测规则
@@ -554,7 +556,7 @@ com.tencent.tinker  检测成功
 
 ![Tinker热修复方案](imgs/Tinker热修复方案.png)
 
-### DEX修复原理
+#### DEX修复原理
 
 Tinker是整体替换DEX的方案。主要的原理是与MutilDex技术基本相同，区别在于不再将patch.dex增加到elements数组中，而是差量的方式给出patch.dex，然后将patch.dex与应用的classes.dex合并，然后整体替换掉旧的DEX文件，以达到修复的目的。
 ![Tinker修复原理](imgs/Tinker修复原理.png)
@@ -565,9 +567,13 @@ Tinker是整体替换DEX的方案。主要的原理是与MutilDex技术基本相
 
 *会不会有方法超过65535问题？*
 
-### 资源修复原理
+#### 资源修复原理
 
-将新的资源文件路径加到AssetManager中就可以了。在不同的configuration下，会对应不同的Resource对象，所以通过ResourceManager拿到所有的configuration对应的resource然后替换其assetManager。
+1. 反射拿到ActivityThread对象持有的LoadedApk容器
+2. 遍历容器中LoadedApk对象,反射替换mResDir属性为补丁物理路径
+3. 创建新的AssetManager, 并根据补丁路径反射调用addAssetPath将补丁加载到新的AssetManager中
+4. 反射获得ResourcesManager持有的Resources容器对象
+5. 遍历出容器中的Resources对象, 替换对象的属性为新的AssetManager, 并且根据原属性重新更新Resources对象的配置
 
 ```java
 @tinker/tinker-android/tinker-android-loader/src/main/java/com/tencent/tinker/loader/TinkerResourcePatcher.java
@@ -753,7 +759,7 @@ public static void monkeyPatchExistingResources(Context context, String external
 
 ```
 
-### so修复原理
+#### so修复原理
 
 修改nativeLibraryDirectories数组，将补丁so路径添加到数组最前面
 
@@ -782,14 +788,14 @@ private static void install(ClassLoader classLoader, File folder)  throws Throwa
 }
 ```
 
-## Robust（美团）
+### Robust（美团）
 github: https://github.com/Meituan-Dianping/Robust
 
 检测规则
 ~~com.meituan.robust~~
 com.meituan.robust.assistant.PatchHelper  检测成功
 
-### DEX修复原理
+#### DEX修复原理
 
 ![Robust热修复方案](imgs/robust热修复方案.png)
 
@@ -957,46 +963,36 @@ protected boolean patch(Context context, Patch patch) {
 }
 ```
 
-## Amigo（饿了么）
+### Amigo（饿了么）
 github: https://github.com/eleme/Amigo
 
 检测规则
 ~~me.ele.amigo~~
 me.ele.amigo.Amigo  检测成功
 
-### DEX修复原理
+#### dex替换
 
-在替换dex时，Amigo将补丁包中每个dex对应的Element对象拿出来，之后组成新的Element[]，通过反射，将现有的Element[]数组替换掉。
-
-### 资源修复原理
-
-将新的资源文件路径加到AssetManager中就可以了。在不同的configuration下，会对应不同的Resource对象，所以通过ResourceManager拿到所有的configuration对应的resource然后替换其assetManager。
-
-### so修复原理
-
-把补丁so库的路径插入到nativeLibraryDirectories数组的最前面就能达到加载so库的时候是补丁so库而不是原来so库的目的，从而达到修复的目的
-
-## RocooFix（个人）
+### RocooFix（个人）
 github: https://github.com/dodola/RocooFix
 
 检测规则
 ~~com.dodola.rocoofix~~
 com.dodola.rocoofix.RocooFix  检测成功
 
-# 插件化
+## 插件化
 
-## RePlugin（360）
+### RePlugin（360）
 github: https://github.com/Qihoo360/RePlugin
 
-## VirtualAPK（滴滴出行）
+### VirtualAPK（滴滴出行）
 github: https://github.com/didi/VirtualAPK
 
-## DynamicAPK（携程）
+### DynamicAPK（携程）
 github: https://github.com/CtripMobile/DynamicAPK
 
-## ...
+### ...
 
-# 参考文章
+## 参考文章
 1. http://www.jianshu.com/p/eec0ab6800a4    Android热修复方案比较
 2. https://yq.aliyun.com/articles/74598?spm=5176.doc53240.2.33.y4KlWO    Android热修复升级探索——追寻极致的代码热替换
 3. http://blog.csdn.net/yubo_725/article/details/52385595    Android APK DEX分包总结
@@ -1004,6 +1000,6 @@ github: https://github.com/CtripMobile/DynamicAPK
 5. https://mp.weixin.qq.com/s?__biz=MzI1MTA1MzM2Nw==&mid=400118620&idx=1&sn=b4fdd5055731290eef12ad0d17f39d4a    安卓App热补丁动态修复技术介绍
 6. http://dev.qq.com/topic/57ff5832bb8fec206ce2185d    QFix探索之路—手Q热补丁轻量级方案
 7. http://blog.csdn.net/u011200604/article/details/60143582    Android 热修复原理篇及几大方案比较
-7. https://github.com/eleme/Amigo/blob/bb42929382c0e14b2d5a2af68cbc24ea69c2cc3e/blog.md    Amigo 源码解读
+7. https://www.diycode.cc/topics/280    Android Hotfix 新方案——Amigo 源码解读
 7. http://blog.csdn.net/l2show/article/details/53187548    Android 热修复方案Tinker
 8. https://yq.aliyun.com/attachment/download/?id=1855    《深入探索Android热修复技术原理.pdf》
