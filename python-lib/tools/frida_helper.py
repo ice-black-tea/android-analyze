@@ -12,6 +12,7 @@ import colorama
 from colorama import Fore, Back, Style
 
 from .utils import utils
+from .frida_server import frida_server
 
 class frida_helper:
     """
@@ -114,6 +115,8 @@ class frida_helper:
         """
 
         colorama.init(True)
+        frida_server.start()
+
         jscode = frida_helper.__get_preset_jscode() + jscode
         if adb_shell != '':
             frida_helper.kill(package_name)
@@ -239,7 +242,7 @@ class frida_helper:
              * 输出当前调用堆栈
              */
             function PrintStack() {
-                __PrintStack(Throwable.$new().getStackTrace());
+                __PrintStack(Throwable.$new().getStackTrace(), true);
             };
 
             /*

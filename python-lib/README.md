@@ -25,12 +25,6 @@ sudo pip3 install request
 
 ## 用法
 
-### 下载并打开frida server
-
-```
-python3 -m tools.frida_server
-```
-
 ### 运行frida hook脚本
 
 如：
