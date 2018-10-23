@@ -16,6 +16,10 @@ import shutil
 
 class utils:
     @staticmethod
+    def is_empty(string):
+        return string is None or len(string) == 0
+
+    @staticmethod
     def exec_shell(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE):
         """ 执行shell """
         try:
@@ -24,7 +28,7 @@ class utils:
             return None, "", e.message
         out, err = process.communicate()
         out = out.decode(errors='ignore') if out else ""
-        err = err.decode() if err else ""
+        err = err.decode(errors='ignore') if err else ""
         return process, out, err
 
     @staticmethod

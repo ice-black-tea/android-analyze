@@ -30,9 +30,15 @@ class frida_server:
         if (abi is None):
             return
         fsf = frida_server_file(version, abi)
-        if (not frida_server.__is_running(fsf)):
+        if (frida_server.__is_running(fsf)):
+            print("[*] Frida server is running ...")
+        else:
+            print("[*] Frida server is not running, now start frida server ...")
             frida_server.__start(fsf)
-            time.sleep(1)
+            if (frida_server.__is_running(fsf)):
+                print("[*] Frida server is running ...")
+            else:
+                print("[*] Frida server failed to run ...")
 
     @staticmethod
     def is_running():
@@ -52,16 +58,16 @@ class frida_server:
             with lzma.open(tmp_path, "rb") as read, open(fsf.path, "wb") as write:
                 shutil.copyfileobj(read, write)
             os.remove(tmp_path)
+        log_prefix = "/sdcard/frida_server_log_"
+        log_path = "{0}{1}".format(log_prefix, time.time())
         utils.exec_shell("adb forward tcp:27042 tcp:27042", stdout=None, stderr=None)
         utils.exec_shell("adb forward tcp:27043 tcp:27043", stdout=None, stderr=None)
-        utils.exec_shell("adb push {0} /data/local/tmp/".format(fsf.path), stdout=None, stderr=None)
-        utils.exec_shell("adb shell chmod 755 {0}".format(fsf.target_path), stdout=None, stderr=None)
-        system = platform.system()
-        if (system == "Linux"):
-            utils.exec_shell("adb shell su -c {0} &".format(fsf.target_path), stdout=None, stderr=None)
-        # Todo: 其他平台加个后台运行
-        else:
-            utils.exec_shell("adb shell su -c {0}".format(fsf.target_path), stdout=None, stderr=None)
+        utils.exec_shell("adb push '{0}' /data/local/tmp/".format(fsf.path), stdout=None, stderr=None)
+        utils.exec_shell("adb shell \"chmod 755 '{0}' >'{1}' 2>&1\"".format(fsf.target_path, log_path), stdout=None, stderr=None)
+        utils.exec_shell("adb shell \"su -l -c nohup '{0}' >>'{1}' 2>&1 &\"".format(fsf.target_path, log_path), stdout=None, stderr=None)
+        time.sleep(1)
+        utils.exec_shell("adb shell \"cat '{0}'\"".format(log_path), stdout=None, stderr=None)
+        utils.exec_shell("adb shell \"rm -f {0}*\"".format(log_prefix), stdout=None, stderr=None)
 
     @staticmethod
     def __is_running(fsf: frida_server_file):
