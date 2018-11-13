@@ -102,7 +102,7 @@ class frida_helper:
         结束进程
             package_name(str):  包名
         """
-        utils.exec_adb_shell('am force-stop %s' % package_name, stdout=None, stderr=None)
+        utils.exec_adb_shell('am force-stop %s' % package_name)
 
     @staticmethod
     def run(package_name, jscode = "", process_name = "", adb_shell = ""):
@@ -120,7 +120,7 @@ class frida_helper:
         jscode = frida_helper.__get_preset_jscode() + jscode
         if adb_shell != '':
             frida_helper.kill(package_name)
-            utils.exec_adb_shell(adb_shell, stdout=None, stderr=None)
+            utils.exec_adb_shell(adb_shell)
             for process in frida_helper.get_processes(package_name, process_name):
                 print('[*] Attach process: %s (%d)' % (process.name, process.pid))
                 session = frida_helper.get_device().attach(process.pid)
@@ -187,21 +187,24 @@ class frida_helper:
         return '[{0}] {1}'.format(tag, str(message).replace('\n', '\n    '))
 
     @staticmethod
-    def __contain(obj, key):
-        return obj is not None and isinstance(obj, dict) and key in obj
+    def __contain(obj, key, value=None):
+        return obj is not None \
+           and isinstance(obj, dict) \
+           and key in obj \
+           and (value is not None or obj[key] == value)
 
     @staticmethod
     def __on_message(message, data):
-        if frida_helper.__contain(message, 'type') and message['type'] == 'send' and frida_helper.__contain(message, 'payload'):
+        if frida_helper.__contain(message, 'type', 'send') and frida_helper.__contain(message, 'payload'):
             payload = message['payload']
             if frida_helper.__contain(payload, 'frida_stack'):
-                print(Fore.LIGHTYELLOW_EX + frida_helper.__format("*", payload['frida_stack']))
+                print(Fore.LIGHTYELLOW_EX + frida_helper.__format('*', payload['frida_stack']))
             elif frida_helper.__contain(payload, 'frida_method'):
-                print(Fore.LIGHTMAGENTA_EX + frida_helper.__format("*", payload['frida_method']))
+                print(Fore.LIGHTMAGENTA_EX + frida_helper.__format('*', payload['frida_method']))
             else:
-                print(frida_helper.__format("*", payload))
-        elif frida_helper.__contain(message, 'type') and message['type'] == 'error' and frida_helper.__contain(message, 'stack'):
-            print(Fore.RED + frida_helper.__format("-", message['stack']))
+                print(frida_helper.__format('*', payload))
+        elif frida_helper.__contain(message, 'type', 'error') and frida_helper.__contain(message, 'stack'):
+            print(Fore.RED + frida_helper.__format('*', message['stack']))
         else:
             print(str(message))
 

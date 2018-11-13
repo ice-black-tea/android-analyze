@@ -16,7 +16,10 @@ class frida_server_file:
 
     def __init__(self, version, abi):
         self.name = "frida-server-{0}-android-{1}".format(version, abi)
-        self.path = "{0}/.frida/{1}".format(os.path.expanduser('~'), self.name)
+        self.dir = os.path.join(os.path.expanduser('~'), ".frida")
+        if not os.path.exists(self.dir):
+            os.makedirs(self.dir)
+        self.path = os.path.join(self.dir, self.name)
         self.url = "https://github.com/frida/frida/releases/download/{0}/{1}.xz".format(version, self.name)
         self.target_path = "/data/local/tmp/{0}".format(self.name)
 
@@ -58,24 +61,27 @@ class frida_server:
             with lzma.open(tmp_path, "rb") as read, open(fsf.path, "wb") as write:
                 shutil.copyfileobj(read, write)
             os.remove(tmp_path)
-        log_prefix = "/sdcard/frida_server_log_"
-        log_path = "{0}{1}".format(log_prefix, time.time())
-        utils.exec_shell("adb forward tcp:27042 tcp:27042", stdout=None, stderr=None)
-        utils.exec_shell("adb forward tcp:27043 tcp:27043", stdout=None, stderr=None)
-        utils.exec_shell("adb push '{0}' /data/local/tmp/".format(fsf.path), stdout=None, stderr=None)
-        utils.exec_shell("adb shell \"chmod 755 '{0}' >'{1}' 2>&1\"".format(fsf.target_path, log_path), stdout=None, stderr=None)
-        utils.exec_shell("adb shell \"su -l -c nohup '{0}' >>'{1}' 2>&1 &\"".format(fsf.target_path, log_path), stdout=None, stderr=None)
+        utils.exec_shell("adb forward tcp:27042 tcp:27042")
+        utils.exec_shell("adb forward tcp:27043 tcp:27043")
+        utils.exec_shell("adb push '{0}' /data/local/tmp/".format(fsf.path))
+        utils.exec_shell("adb shell \"chmod 755 '{0}'\"".format(fsf.target_path))
+        if utils.get_adb_shell_uid() == 0:
+            commond = "'{0}'".format(fsf.target_path)
+        else:
+            commond = "su -c '{0}'".format(fsf.target_path)
+        system_name = platform.system()
+        if system_name == "Linux" or system_name == "Darwin":
+            utils.exec_shell("adb shell \"{0}\" &".format(commond))
+        elif system_name == "Windows":
+            utils.exec_shell("start /b adb shell \"{0}\"".format(commond))
+        else:
+            raise Exception('not yet implemented')
         time.sleep(1)
-        utils.exec_shell("adb shell \"cat '{0}'\"".format(log_path), stdout=None, stderr=None)
-        utils.exec_shell("adb shell \"rm -f {0}*\"".format(log_prefix), stdout=None, stderr=None)
 
     @staticmethod
     def __is_running(fsf: frida_server_file):
-        process, out, err = utils.exec_shell("adb shell \"ps | grep {0}\"".format(fsf.name))
-        if (process is not None):
-            return fsf.name in out
-        print(err if not None else out)
-        return False
+        process = utils.exec_shell("adb shell \"ps | grep {0}\"".format(fsf.name), True, True)
+        return fsf.name in process.out
 
 if __name__ == '__main__':
     frida_server.start()
