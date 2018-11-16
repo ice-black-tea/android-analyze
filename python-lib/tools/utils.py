@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 
 import subprocess
 
@@ -75,7 +76,7 @@ class utils:
         return None
 
     @staticmethod
-    def get_adb_shell_uid():
+    def get_adb_uid():
         """ 获取shell的uid """
         try:
             return int(utils.exec_adb_shell("id -u", True, True).out)

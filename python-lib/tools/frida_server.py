@@ -33,12 +33,12 @@ class frida_server:
         if (abi is None):
             return
         fsf = frida_server_file(version, abi)
-        if (frida_server.__is_running(fsf)):
+        if (frida_server._is_running(fsf)):
             print("[*] Frida server is running ...")
         else:
             print("[*] Frida server is not running, now start frida server ...")
-            frida_server.__start(fsf)
-            if (frida_server.__is_running(fsf)):
+            frida_server._start(fsf)
+            if (frida_server._is_running(fsf)):
                 print("[*] Frida server is running ...")
             else:
                 print("[*] Frida server failed to run ...")
@@ -51,10 +51,10 @@ class frida_server:
         if (abi is None):
             return False
         fsf = frida_server_file(version, abi)
-        return frida_server.__is_running(sfs)
+        return frida_server._is_running(sfs)
 
     @staticmethod
-    def __start(fsf: frida_server_file):
+    def _start(fsf: frida_server_file):
         if (not os.path.exists(fsf.path)):
             tmp_path = tempfile.mktemp()
             utils.download_from_url(fsf.url, tmp_path)
@@ -65,7 +65,7 @@ class frida_server:
         utils.exec_shell("adb forward tcp:27043 tcp:27043")
         utils.exec_shell("adb push '{0}' /data/local/tmp/".format(fsf.path))
         utils.exec_shell("adb shell \"chmod 755 '{0}'\"".format(fsf.target_path))
-        if utils.get_adb_shell_uid() == 0:
+        if utils.get_adb_uid() == 0:
             commond = "'{0}'".format(fsf.target_path)
         else:
             commond = "su -c '{0}'".format(fsf.target_path)
@@ -79,7 +79,7 @@ class frida_server:
         time.sleep(1)
 
     @staticmethod
-    def __is_running(fsf: frida_server_file):
+    def _is_running(fsf: frida_server_file):
         process = utils.exec_shell("adb shell \"ps | grep {0}\"".format(fsf.name), True, True)
         return fsf.name in process.out
 

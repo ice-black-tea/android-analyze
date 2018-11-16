@@ -34,7 +34,7 @@ class frida_helper:
         \"\"\"
 
         if __name__ == '__main__':
-            frida_helper.run("com.hu.test", jscode=jscode, adb_shell="am start com.hu.test/.MainActivity")
+            frida_helper.run("com.hu.test", jscode=jscode)
 
     ----------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ class frida_helper:
         colorama.init(True)
         frida_server.start()
 
-        jscode = frida_helper.__get_preset_jscode() + jscode
+        jscode = frida_helper._get_preset_jscode() + jscode
         if adb_shell != '':
             frida_helper.kill(package_name)
             utils.exec_adb_shell(adb_shell)
@@ -125,15 +125,15 @@ class frida_helper:
                 print('[*] Attach process: %s (%d)' % (process.name, process.pid))
                 session = frida_helper.get_device().attach(process.pid)
                 script = session.create_script(jscode)
-                script.on('message', frida_helper.__on_message)
-                threading.Thread(target=frida_helper.__jdb_connect, args=(process.pid,)).start()
+                script.on('message', frida_helper._on_message)
+                threading.Thread(target=frida_helper._jdb_connect, args=(process.pid,)).start()
                 script.load()
         else:
             for process in frida_helper.get_processes(package_name, process_name):
                 print('[*] Attach process: %s (%d)' % (process.name, process.pid))
                 session = frida_helper.get_device().attach(process.pid)
                 script = session.create_script(jscode)
-                script.on('message', frida_helper.__on_message)
+                script.on('message', frida_helper._on_message)
                 script.load()
         print('[*] Running ...')
         sys.stdin.read()
@@ -168,10 +168,10 @@ class frida_helper:
             process_name(str):  进程名
         """
         for process in frida_helper.get_processes(package_name, process_name):
-            frida_helper.__jdb_connect(process.pid)
+            frida_helper._jdb_connect(process.pid)
 
     @staticmethod
-    def __jdb_connect(pid):
+    def _jdb_connect(pid):
         subprocess.call(['adb', 'forward', 'tcp:8700', 'jdwp:' + str(pid)])
         child = subprocess.Popen( \
             ['jdb', '-connect', 'com.sun.jdi.SocketAttach:hostname=127.0.0.1,port=8700'], \
@@ -183,33 +183,33 @@ class frida_helper:
             pass
 
     @staticmethod
-    def __format(tag, message):
+    def _format(tag, message):
         return '[{0}] {1}'.format(tag, str(message).replace('\n', '\n    '))
 
     @staticmethod
-    def __contain(obj, key, value=None):
+    def _contain(obj, key, value=None):
         return obj is not None \
            and isinstance(obj, dict) \
            and key in obj \
            and (value is not None or obj[key] == value)
 
     @staticmethod
-    def __on_message(message, data):
-        if frida_helper.__contain(message, 'type', 'send') and frida_helper.__contain(message, 'payload'):
+    def _on_message(message, data):
+        if frida_helper._contain(message, 'type', 'send') and frida_helper._contain(message, 'payload'):
             payload = message['payload']
-            if frida_helper.__contain(payload, 'frida_stack'):
-                print(Fore.LIGHTYELLOW_EX + frida_helper.__format('*', payload['frida_stack']))
-            elif frida_helper.__contain(payload, 'frida_method'):
-                print(Fore.LIGHTMAGENTA_EX + frida_helper.__format('*', payload['frida_method']))
+            if frida_helper._contain(payload, 'frida_stack'):
+                print(Fore.LIGHTYELLOW_EX + frida_helper._format('*', payload['frida_stack']))
+            elif frida_helper._contain(payload, 'frida_method'):
+                print(Fore.LIGHTMAGENTA_EX + frida_helper._format('*', payload['frida_method']))
             else:
-                print(frida_helper.__format('*', payload))
-        elif frida_helper.__contain(message, 'type', 'error') and frida_helper.__contain(message, 'stack'):
-            print(Fore.RED + frida_helper.__format('*', message['stack']))
+                print(frida_helper._format('*', payload))
+        elif frida_helper._contain(message, 'type', 'error') and frida_helper._contain(message, 'stack'):
+            print(Fore.RED + frida_helper._format('*', message['stack']))
         else:
             print(str(message))
 
     @staticmethod
-    def __get_preset_jscode():
+    def _get_preset_jscode():
         return """
             var Throwable = null;
             var JavaString = null;
